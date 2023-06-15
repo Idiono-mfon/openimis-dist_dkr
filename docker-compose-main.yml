@@ -3,10 +3,7 @@ version: "2.4"
 services:
   db:
     container_name: ${PROJECT_NAME:-openimis}-db
-    build:
-      context: https://github.com/openimis/database_postgresql.git#${DB_BRANCH:-develop}
-      args:
-        - POSTGRES_PASSWORD=${DB_PASSWORD}
+    image: ghcr.io/openimis/openimis-pgsql:${DB_TAG:-latest}
     environment:
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
@@ -23,35 +20,27 @@ services:
     restart: always
     networks:
       openimis-net:
-
   backend:
-    container_name: ${PROJECT_NAME:-openimis}-backend
-    build:
-      context: https://github.com/openimis/openimis-be_py.git#${BE_BRANCH:-develop}
-      args:
-        OPENIMIS_CONF_JSON: ${OPENIMIS_BE_CONF_JSON}
-    image: openimis/backend:${PROJECT_NAME:-local}
+    container_name: ${PROJECT_NAME:-openimis}-api
+    image: ghcr.io/openimis/openimis-be:${BE_TAG:-develop}
+    restart: always
+    command: start
     volumes:
       - photos:/openimis-be/openIMIS/images/insurees
-    command: start
     environment: &backend-env
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
-      - DB_ENGINE=${DB_ENGINE:-django.db.backends.postgresql}
-      - SITE_ROOT=${SITE_ROOT:-api}
+      - SITE_ROOT=api
+      - DEBUG=True
+      - DJANGO_LOG_LEVEL=DEBUG
       - SITE_URL=${NEW_OPENIMIS_HOST}
       - CELERY_BROKER_URL=amqp://rabbitmq
-      - PHOTO_ROOT_PATH=images/insurees
-      - DJANGO_LOG_LEVEL=${DJANGO_LOG_LEVEL}
-      - DJANGO_LOG_HANDLER=${DJANGO_LOG_HANDLER}
-      - DJANGO_MIGRATE=${DJANGO_MIGRATE}
-    depends_on:
+    depends_on:  
       db:
         condition: service_healthy
-    restart: always
     networks:
       openimis-net:
 
@@ -82,7 +71,7 @@ services:
     restart: always
     volumes:
       - photos:/openimis-be/openIMIS/images/insurees
-    depends_on:
+    depends_on: 
       - backend
     environment: *backend-env
     networks:
@@ -109,7 +98,7 @@ services:
       - ./Escape:/app/Escape
       - ./FromPhone:/app/FromPhone
     restart: always
-    depends_on:
+    depends_on:  
       db:
         condition: service_healthy
     networks:
